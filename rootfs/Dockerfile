@@ -1,6 +1,8 @@
-FROM quay.io/deis/base:0.2.0
+FROM index.tenxcloud.com/tuhuayuan/deis-base:0.2.0
 
 COPY . /
+
+RUN sed -i 's/archive.ubuntu.com/mirrors.ustc.edu.cn/g' /etc/apt/sources.list
 
 RUN apt-get update \
 	&& apt-get install -y \

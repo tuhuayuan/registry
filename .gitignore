@@ -1,1 +1,4 @@
-rootfs/opt/
+*.tmp.yaml
+rootfs/opt
+vendor/
+coverage.txt

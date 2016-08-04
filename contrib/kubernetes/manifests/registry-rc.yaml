@@ -9,11 +9,13 @@ spec:
   template:
     metadata:
       labels:
+        app: registry
         name: registry
     spec:
       containers:
         - name: registry
           image: registry:2
+          imagePullPolicy: Always
           env:
             - name: REGISTRY_STORAGE_DELETE_ENABLED
               value: "true"
@@ -26,11 +28,21 @@ spec:
           volumeMounts:
             - name: registry-storage
               mountPath: /var/lib/registry
-            - name: registry-creds
-              mountPath: /var/run/secrets/deis/registry/creds
       volumes:
         - name: registry-storage
-          emptyDir: {}
-        - name: registry-creds
-          secret:
-            secretName: fs-keyfile
+          persistentVolumeClaim:
+            claimName: registry-pv-claim
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: registry-pv-claim
+  labels:
+    app: registry
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 500Mi 
+

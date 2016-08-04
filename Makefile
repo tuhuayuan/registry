@@ -11,7 +11,7 @@ REPO_PATH = github.com/deis/registry
 
 # The following variables describe the containerized development environment
 # and other build options
-DEV_ENV_IMAGE := quay.io/deis/go-dev:0.11.1
+DEV_ENV_IMAGE := index.tenxcloud.com/tuhuayuan/go-dev:v1.0
 DEV_ENV_WORK_DIR := /go/src/${REPO_PATH}
 DEV_ENV_PREFIX := docker run --rm -e GO15VENDOREXPERIMENT=1 -v ${CURDIR}:${DEV_ENV_WORK_DIR} -w ${DEV_ENV_WORK_DIR}
 DEV_ENV_CMD := ${DEV_ENV_PREFIX} ${DEV_ENV_IMAGE}
@@ -26,8 +26,7 @@ ifeq ($(STORAGE_TYPE),)
 endif
 
 # Kubernetes-specific information for Secret, RC, Service, and Image.
-SECRET := contrib/kubernetes/manifests/${SHORT_NAME}-${STORAGE_TYPE}-secret.yaml
-RC := contrib/kubernetes/manifests/${SHORT_NAME}-rc.yaml
+RC := contrib/kubernetes/manifests/${SHORT_NAME}-rc.tmp.yaml
 SVC := contrib/kubernetes/manifests/${SHORT_NAME}-service.yaml
 
 all:
@@ -53,10 +52,12 @@ build-binary:
 	${DEV_ENV_CMD} upx -9 --brute $(BINDIR)/${SHORT_NAME}
 
 # Deploy is a Kubernetes-oriented target
-deploy: kube-secret kube-service kube-rc
+deploy: kube-service kube-rc tls-secret
 
-kube-secret: check-kubectl
-	kubectl create -f ${SECRET}
+tls-secret: check-kubectl
+	kubectl create secret generic registry-tls-cert \
+		--from-file=tls.crt=${REGISTRY_TSL_CRT} \
+		--from-file=tls.key=${REGISTRY_TSL_KEY} 
 
 # Some things, like services, have to be deployed before pods. This is an
 # example target. Others could perhaps include kube-volume, etc.
@@ -68,7 +69,9 @@ kube-rc: check-kubectl
 	kubectl create -f ${RC}
 
 kube-clean: check-kubectl
-	kubectl delete rc ${SHORT_NAME}
+	kubectl delete -f ${SVC}
+	kubectl delete -f ${RC}
+	kubectl delete secret registry-tls-cert
 
 test: check-docker
 	contrib/ci/test.sh ${IMAGE}
